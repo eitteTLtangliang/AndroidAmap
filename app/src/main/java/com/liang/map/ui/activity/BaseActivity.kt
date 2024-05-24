@@ -15,6 +15,7 @@ import android.content.Context
 import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
+import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewbinding.ViewBinding
 import com.amap.api.location.AMapLocationClient
@@ -88,6 +89,14 @@ abstract class BaseActivity<V : ViewBinding> : AppCompatActivity() {
                 Manifest.permission.ACCESS_FINE_LOCATION
             )
         )
+    }
+
+    protected fun closeKeyboard() {
+        val view = this.currentFocus
+        if (view != null) {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
+        }
     }
 
     protected fun requestPermission(block: (Boolean) -> Unit) {

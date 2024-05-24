@@ -3,13 +3,12 @@
 package com.liang.map.ui.activity
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.location.Location
 import android.util.Log
 import android.view.View
-import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import com.amap.api.location.AMapLocation
@@ -17,7 +16,7 @@ import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
 import com.amap.api.location.AMapLocationClientOption.AMapLocationMode
 import com.amap.api.location.AMapLocationListener
-import com.amap.api.maps2d.AMap.*
+import com.amap.api.maps2d.AMap
 import com.amap.api.maps2d.CameraUpdateFactory
 import com.amap.api.maps2d.LocationSource
 import com.amap.api.maps2d.LocationSource.OnLocationChangedListener
@@ -34,9 +33,8 @@ import com.liang.map.ui.overlay.RideRouteOverlay
 import com.liang.map.util.AMapUtil
 import com.liang.map.util.Constants
 
-class MainActivity : BaseActivity<ActivityMainBinding>(), OnMapClickListener, OnMarkerClickListener,
-    OnInfoWindowClickListener, InfoWindowAdapter, RouteSearch.OnRouteSearchListener, LocationSource,
-    AMapLocationListener {
+class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListener, AMap.OnMarkerClickListener, AMap.OnInfoWindowClickListener, AMap.InfoWindowAdapter, RouteSearch.OnRouteSearchListener, LocationSource, AMapLocationListener,
+    AMap.OnMyLocationChangeListener {
     private val locationClient by lazy { AMapLocationClient(this) }
     private val locationOption by lazy { AMapLocationClientOption() }
     private val routeSearch by lazy { RouteSearch(this) }
@@ -87,17 +85,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), OnMapClickListener, On
             setOnMarkerClickListener(this@MainActivity)
             setOnInfoWindowClickListener(this@MainActivity)
             setInfoWindowAdapter(this@MainActivity)
+            setOnMyLocationChangeListener(this@MainActivity)
             routeSearch.setRouteSearchListener(this@MainActivity)
-        }
-        //5.sensor helper
-        sensorHelper.registerSensorListener()
-    }
-
-    private fun closeKeyboard() {
-        val view = this.currentFocus
-        if (view != null) {
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
     }
 
@@ -113,10 +102,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), OnMapClickListener, On
             uiSettings.isMyLocationButtonEnabled = true
             uiSettings.isScrollGesturesEnabled = true
             uiSettings.isScaleControlsEnabled = true
-            isMyLocationEnabled = false
-            mapType = MAP_TYPE_NORMAL
+            mapType = AMap.MAP_TYPE_NORMAL
             setLocationSource(this@MainActivity)
-            uiSettings.isMyLocationButtonEnabled = true
             isMyLocationEnabled = true
         }
     }
@@ -264,6 +251,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), OnMapClickListener, On
         } else {
             super.onBackPressed()
         }
+    }
+
+    override fun onMyLocationChange(location: Location) {
+        Log.v(TAG, "latitude:${location.latitude}, longitude:${location.longitude}, accuracy:${location.accuracy}")
     }
 
     override fun onLocationChanged(amapLocation: AMapLocation) {

@@ -18,7 +18,7 @@ class SensorEventHelper(private val context: Context) : SensorEventListener {
 
     private var sensorManager: SensorManager =
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private var sensor: Sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION)
+    private var sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION)
     private var lastTime: Long = 0
     private var angle = 0f
     private var marker: Marker? = null
