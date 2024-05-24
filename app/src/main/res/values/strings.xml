@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">AndroidAmap</string>
+    <string name="no_result">Sorry, no relevant data found in the search!</string>
+</resources>
