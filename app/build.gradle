@@ -32,7 +32,13 @@ android {
         signingConfig signingConfigs.release
 
         ndk {
-            abiFilters "armeabi", "armeabi-v7a", "arm64-v8a", "x86","x86_64"
+            abiFilters "armeabi-v7a", "arm64-v8a"
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
         }
     }
 
@@ -62,7 +68,6 @@ android {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'androidx.core:core-ktx:1.6.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0'
@@ -79,8 +84,14 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.github.getActivity:XXPermissions:18.6'
+    implementation 'androidx.datastore:datastore:1.0.0'
+    implementation 'androidx.datastore:datastore-preferences:1.0.0'
+    implementation 'androidx.preference:preference:1.1.1'
 
+
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    //implementation 'com.amap.latest.integration'
+    //implementation 'com.amap.api:latest.integration'
+    //implementation 'com.amap.api:latest.integration'
     //implementation 'com.amap.api:map2d:latest.integration'
-    //implementation 'com.amap.api:location:latest.integration'
-    //implementation 'com.amap.api:search:latest.integration'
 }

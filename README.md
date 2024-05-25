@@ -1,13 +1,13 @@
-###  项目地址
+###  1。项目地址
 https://github.com/eitteTLtangliang/AndroidAmap
 
-### 获取AMAP apiKey
+### 2.获取AMAP apiKey
 1.注册Amap账号，控制台->我的应用->新建应用； 
 2.在Android Studio生成jks签名文件，keytool读取签名信息；
 3.填写SHA1签名以及Package name；
 4.填写完整信息后获取apiKey。
 
-###  开发Amap地图功能
+###  3.Amap地图功能
 1.权限授予
   1.1.静态权限  AndroidManifest.xml 声明
         <uses-permission android:name="android.permission.INTERNET" />
@@ -16,6 +16,7 @@ https://github.com/eitteTLtangliang/AndroidAmap
         <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
         <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
         <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+        <uses-permission android:name="android.permission.WAKE_LOCK" />
   1.2.动态权限  ACCESS_COARSE_LOCATION与ACCESS_FINE_LOCATION
        //2.location permission
        if (checkPermission()) {
@@ -172,5 +173,32 @@ override fun onRideRouteSearched(result: RideRouteResult, errorCode: Int) {
   }
 6.路径详情
 详见RideRouteDetailActivity.kt
+
+### 4.骑行导航
+1.计算路径
+给定出发地经纬度与目的地经纬度值
+aMapNavi.calculateRideRoute(
+  NaviLatLng(startLatLng.latitude, startLatLng.longitude), 
+  NaviLatLng(endLatLng.latitude, endLatLng.longitude)
+)
+2.开始导航
+aMapNavi.startNavi(NaviType.GPS)
+导航Type
+public static final int NONE = -1;  //网络导航
+public static final int GPS = 1;  //GPS导航
+public static final int EMULATOR = 2;  //模拟导航,探路
+public static final int CRUISE = 3;  //巡航
+
+
+###  常见问题
+1. Q.地图默认显示北京 A.API_KEY未正确填写
+2. Q.3D_sdk地图渲染不出来（显示黑色） A.xxx.so路径放置有误,高德地图SDK链接动态库的位置位于app->lib下。自行放置app->main->jniLibs不可。并且在src/build.gradle正确配置sourceSets路径。
+3. Q.导航页面上的”退出“ ”全览“ 导航信息等不可用，日志出现如下：
+   java.lang.NullPointerException: Attempt to invoke virtual method 'android.view.View com.amap.api.navi.view.nightmode.NightModeLinearLayout.findViewById(int)' on a null object reference
+   需将导航页面xxxActivity的父类由AppCompatActivity或其子类换成Activity，并主题更换成android:theme="@android:style/Theme.Light.NoTitleBar"
+   其布局文件xxx.xml的跟本局View换成LinearLayout。
+4. ...
+
+
   
 

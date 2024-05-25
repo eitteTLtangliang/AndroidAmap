@@ -11,8 +11,8 @@ package com.liang.map.ui.adapter
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import com.amap.api.location.AMapLocation
-import com.amap.api.maps2d.AMapUtils
-import com.amap.api.maps2d.model.LatLng
+import com.amap.api.maps.AMapUtils
+import com.amap.api.maps.model.LatLng
 import com.amap.api.services.help.Tip
 import com.liang.map.databinding.AdapterItemSearchLocationBinding
 

@@ -8,8 +8,10 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/workspace/AndroidProject/SelfStudy/AndroidAmap/app/src/main/res/drawable/ic_back_left.xml" value="0.2245" />
+        <entry key="..\:/workspace/AndroidProject/SelfStudy/AndroidAmap/app/src/main/res/drawable/white_border.xml" value="0.214" />
         <entry key="..\:/workspace/AndroidProject/SelfStudy/AndroidAmap/app/src/main/res/drawable/whiteborder.xml" value="0.2245" />
         <entry key="..\:/workspace/AndroidProject/SelfStudy/AndroidAmap/app/src/main/res/layout/activity_main.xml" value="0.33541666666666664" />
+        <entry key="..\:/workspace/AndroidProject/SelfStudy/AndroidAmap/app/src/main/res/layout/activity_ride_route_calculate.xml" value="0.28442028985507245" />
         <entry key="..\:/workspace/AndroidProject/SelfStudy/AndroidAmap/app/src/main/res/layout/activity_route_detail.xml" value="0.20625" />
         <entry key="..\:/workspace/AndroidProject/SelfStudy/AndroidAmap/app/src/main/res/layout/activity_search_location.xml" value="0.3" />
         <entry key="..\:/workspace/AndroidProject/SelfStudy/AndroidAmap/app/src/main/res/layout/adapter_item_ride_route.xml" value="0.24427083333333333" />

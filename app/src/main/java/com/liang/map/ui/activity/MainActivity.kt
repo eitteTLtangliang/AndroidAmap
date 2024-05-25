@@ -3,10 +3,15 @@
 package com.liang.map.ui.activity
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.location.Location
+import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -16,43 +21,58 @@ import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
 import com.amap.api.location.AMapLocationClientOption.AMapLocationMode
 import com.amap.api.location.AMapLocationListener
-import com.amap.api.maps2d.AMap
-import com.amap.api.maps2d.CameraUpdateFactory
-import com.amap.api.maps2d.LocationSource
-import com.amap.api.maps2d.LocationSource.OnLocationChangedListener
-import com.amap.api.maps2d.model.*
-import com.amap.api.services.core.AMapException
+import com.amap.api.maps.*
+import com.amap.api.maps.model.*
+import com.amap.api.services.core.AMapException.CODE_AMAP_SUCCESS
 import com.amap.api.services.core.LatLonPoint
 import com.amap.api.services.help.Tip
 import com.amap.api.services.route.*
 import com.hjq.permissions.XXPermissions
 import com.liang.map.R
 import com.liang.map.databinding.ActivityMainBinding
-import com.liang.map.ui.SensorEventHelper
+import com.liang.map.ui.activity.base.BaseMapActivity
 import com.liang.map.ui.overlay.RideRouteOverlay
 import com.liang.map.util.AMapUtil
 import com.liang.map.util.Constants
+import com.liang.map.util.SensorEventHelper
 
-class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListener, AMap.OnMarkerClickListener, AMap.OnInfoWindowClickListener, AMap.InfoWindowAdapter, RouteSearch.OnRouteSearchListener, LocationSource, AMapLocationListener,
+class MainActivity : BaseMapActivity<ActivityMainBinding>(), AMap.OnMapClickListener,
+    AMap.OnMarkerClickListener, AMap.OnInfoWindowClickListener, AMap.InfoWindowAdapter,
+    RouteSearch.OnRouteSearchListener,
+    LocationSource, AMapLocationListener,
     AMap.OnMyLocationChangeListener {
+    companion object {
+        private const val TAG = "Map-MainActivity"
+    }
+
     private val locationClient by lazy { AMapLocationClient(this) }
     private val locationOption by lazy { AMapLocationClientOption() }
     private val routeSearch by lazy { RouteSearch(this) }
-    private var currentMapLocation: AMapLocation? = null
+    private var aMapLocation: AMapLocation? = null
+    private var startLatLonPoint: LatLonPoint? = null
+    private var endLatLonPoint: LatLonPoint? = null
     private val sensorHelper by lazy { SensorEventHelper(this) }
-    private var onLocationChangedListener: OnLocationChangedListener? = null
+    private var onLocationChangedListener: LocationSource.OnLocationChangedListener? = null
     private var circle: Circle? = null
     private var locMarker: Marker? = null
     private var firstFix = false
     private var exitTime: Long = 0
+    private var isRideRoute = false
 
     override fun getViewBinding(): ActivityMainBinding {
         return ActivityMainBinding.inflate(layoutInflater)
     }
 
-    override fun initView() {
+    override fun getAMapView(): MapView {
+        return binding.map
+    }
+
+    override fun initView(savedInstanceState: Bundle?) {
+        super.initView(savedInstanceState)
+        //0.privacy
+        showPrivacyDialog()
         //1.map view
-        mapView = binding.map
+        //mapView = binding.map
         //2.location permission
         if (checkPermission()) {
             initLocation()
@@ -65,6 +85,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
         val launcher =
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
+                    isRideRoute = true
                     val tip = result.data?.getParcelableExtra<Tip>(Constants.MAP_TIP)
                     Log.i(
                         TAG,
@@ -76,11 +97,33 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
         //4.listener
         binding.edtAddress.setOnClickListener {
             closeKeyboard()
-            val intent = Intent(this, SearchLocationActivity::class.java)
-            intent.putExtra(Constants.MAP_LOCATION, currentMapLocation)
+            val intent = Intent(this, SearchLocationActivity::class.java).apply {
+                putExtra(Constants.MAP_LOCATION, aMapLocation)
+            }
             launcher.launch(intent)
         }
-        mapView?.map?.apply {
+        binding.btnNavigation.setOnClickListener {
+            if (startLatLonPoint == null) {
+                Toast.makeText(
+                    this,
+                    "Current location acquisition failed, please try again!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else if (endLatLonPoint == null) {
+                Toast.makeText(
+                    this,
+                    "Destination not set, please select destination!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                val intent = Intent(this, RideRouteCalculateActivity::class.java).apply {
+                    putExtra(Constants.START_LAT_LON_POINT, startLatLonPoint)
+                    putExtra(Constants.END_LAT_LON_POINT, endLatLonPoint)
+                }
+                startActivity(intent)
+            }
+        }
+        mapView.map.apply {
             setOnMapClickListener(this@MainActivity)
             setOnMarkerClickListener(this@MainActivity)
             setOnInfoWindowClickListener(this@MainActivity)
@@ -97,7 +140,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
         locationClient.setLocationListener(this)
         locationClient.setLocationOption(locationOption)
 
-        mapView?.map?.apply {
+        mapView.map.apply {
             //setMyLocationStyle(myLocationStyle)
             uiSettings.isMyLocationButtonEnabled = true
             uiSettings.isScrollGesturesEnabled = true
@@ -109,12 +152,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
     }
 
     private fun rideRoute(latLonPoint: LatLonPoint) {
-        if (currentMapLocation == null) {
+        endLatLonPoint = latLonPoint
+        if (aMapLocation == null) {
             Toast.makeText(this, "Error.", Toast.LENGTH_SHORT).show()
             return
         }
-        mapView?.map?.apply {
-            if (currentMapLocation == null) {
+        mapView.map.apply {
+            if (aMapLocation == null) {
                 Toast.makeText(
                     this@MainActivity,
                     "Positioning in progress, try again later",
@@ -123,7 +167,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
                 return
             }
             val startPoint =
-                LatLonPoint(currentMapLocation!!.latitude, currentMapLocation!!.longitude)
+                LatLonPoint(aMapLocation!!.latitude, aMapLocation!!.longitude)
             val endPoint = LatLonPoint(latLonPoint.latitude, latLonPoint.longitude)
             addMarker(
                 MarkerOptions().position(AMapUtil.convertToLatLng(startPoint))
@@ -137,8 +181,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
             val fromAndTo = RouteSearch.FromAndTo(startPoint, endPoint)
             //Cycling path planning
             try {
-                AMapLocationClient.updatePrivacyShow(this@MainActivity, true, true)
-                AMapLocationClient.updatePrivacyAgree(this@MainActivity, true)
                 val query = RouteSearch.RideRouteQuery(fromAndTo /*, mode*/)
                 routeSearch.calculateRideRouteAsyn(query)
             } catch (e: Exception) {
@@ -147,7 +189,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == XXPermissions.REQUEST_CODE) {
             initLocation()
@@ -180,8 +226,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
 
     override fun onRideRouteSearched(result: RideRouteResult, errorCode: Int) {
         dismissProgressDialog()
-        mapView?.map?.clear()
-        if (errorCode == AMapException.CODE_AMAP_SUCCESS) {
+        mapView.map.clear()
+        if (errorCode == CODE_AMAP_SUCCESS) {
             if (result.paths != null) {
                 Log.i(TAG, "paths.size:${result.paths.size}")
                 result.paths.forEach {
@@ -190,11 +236,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
                                 "distance:${it.distance}, duration:${it.duration}"
                     )
                 }
-
                 if (result.paths.size > 0) {
+                    //TODO At present, the first set of solutions has been selected, and other path solutions will continue to be improved according to needs
                     val ridePath = result.paths[0]
                     val rideRouteOverlay =
-                        RideRouteOverlay(mapView!!.map, ridePath, result.startPos, result.targetPos)
+                        RideRouteOverlay(mapView.map, ridePath, result.startPos, result.targetPos)
                     rideRouteOverlay.removeFromMap()
                     rideRouteOverlay.addToMap()
                     rideRouteOverlay.zoomToSpan()
@@ -226,16 +272,22 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
 
     override fun onResume() {
         super.onResume()
-        locationClient.startLocation()
-        sensorHelper.registerSensorListener()
+        Log.v(TAG, "onResume, isRideRoute:${isRideRoute}")
+        if (!isRideRoute) {
+            locationClient.startLocation()
+            sensorHelper.registerSensorListener()
+        }
     }
 
     override fun onPause() {
         super.onPause()
-        sensorHelper.unRegisterSensorListener()
-        sensorHelper.setCurrentMarker(null)
-        firstFix = false
-        locationClient.stopLocation()
+        Log.v(TAG, "onPause, isRideRoute:${isRideRoute}")
+        if (!isRideRoute) {
+            sensorHelper.unRegisterSensorListener()
+            sensorHelper.setCurrentMarker(null)
+            locationClient.stopLocation()
+            firstFix = false
+        }
     }
 
     override fun onDestroy() {
@@ -254,12 +306,16 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
     }
 
     override fun onMyLocationChange(location: Location) {
-        Log.v(TAG, "latitude:${location.latitude}, longitude:${location.longitude}, accuracy:${location.accuracy}")
+        Log.v(
+            TAG,
+            "latitude:${location.latitude}, longitude:${location.longitude}, accuracy:${location.accuracy}"
+        )
     }
 
     override fun onLocationChanged(amapLocation: AMapLocation) {
         Log.v(TAG, "errorCode:${amapLocation.errorCode}, address:${amapLocation.address}")
-        currentMapLocation = amapLocation
+        aMapLocation = amapLocation
+        startLatLonPoint = LatLonPoint(amapLocation.latitude, amapLocation.longitude)
         if (onLocationChangedListener != null) {
             if (amapLocation.errorCode == AMapLocation.LOCATION_SUCCESS) {
                 binding.locationErrInfoText.visibility = View.GONE
@@ -274,7 +330,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
                     circle?.radius = amapLocation.accuracy.toDouble()
                     locMarker?.position = location
                 }
-                mapView?.map?.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 18f))
+                mapView.map.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 18f))
             } else {
                 val errText =
                     "location failed, ${amapLocation.errorCode}, :${amapLocation.errorInfo}"
@@ -285,7 +341,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
         }
     }
 
-    override fun activate(listener: OnLocationChangedListener) {
+    override fun activate(listener: LocationSource.OnLocationChangedListener) {
         onLocationChangedListener = listener
     }
 
@@ -296,13 +352,16 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
     }
 
     private fun addCircle(latlng: LatLng, radius: Double) {
+        if (circle != null) {
+            return
+        }
         val options = CircleOptions()
         options.strokeWidth(1f)
         options.fillColor(Color.argb(10, 0, 0, 180))
         options.strokeColor(Color.argb(180, 3, 145, 255))
         options.center(latlng)
         options.radius(radius)
-        circle = mapView?.map?.addCircle(options)
+        circle = mapView.map.addCircle(options)
     }
 
     private fun addMarker(latlng: LatLng) {
@@ -319,7 +378,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AMap.OnMapClickListene
         options.icon(des)
         options.anchor(0.5f, 0.5f)
         options.position(latlng)
-        locMarker = mapView?.map?.addMarker(options)
+        locMarker = mapView.map.addMarker(options)
         locMarker?.title = "mylocation"
     }
+
 }

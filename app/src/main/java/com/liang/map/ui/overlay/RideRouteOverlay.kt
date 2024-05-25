@@ -1,7 +1,8 @@
 package com.liang.map.ui.overlay
 
-import com.amap.api.maps2d.AMap
-import com.amap.api.maps2d.model.*
+
+import com.amap.api.maps.AMap
+import com.amap.api.maps.model.*
 import com.amap.api.services.core.LatLonPoint
 import com.amap.api.services.route.RidePath
 import com.amap.api.services.route.RideStep

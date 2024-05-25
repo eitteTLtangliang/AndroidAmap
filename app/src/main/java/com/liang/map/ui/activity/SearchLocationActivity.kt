@@ -8,6 +8,7 @@
 package com.liang.map.ui.activity
 
 import android.content.Intent
+import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -19,12 +20,17 @@ import com.amap.api.services.help.Inputtips.InputtipsListener
 import com.amap.api.services.help.InputtipsQuery
 import com.amap.api.services.help.Tip
 import com.liang.map.databinding.ActivitySearchLocationBinding
+import com.liang.map.ui.activity.base.BaseActivity
 import com.liang.map.ui.adapter.OnItemClickListener
 import com.liang.map.ui.adapter.SearchLocationAdapter
 import com.liang.map.util.Constants
 
 
 class SearchLocationActivity : BaseActivity<ActivitySearchLocationBinding>(), InputtipsListener {
+    companion object {
+        private const val TAG = "Map-SearchLocationActivity"
+    }
+
     private val mapLocation by lazy { intent.getParcelableExtra<AMapLocation>(Constants.MAP_LOCATION) }
     private val searchLocationAdapter by lazy { SearchLocationAdapter() }
 
@@ -32,8 +38,9 @@ class SearchLocationActivity : BaseActivity<ActivitySearchLocationBinding>(), In
         return ActivitySearchLocationBinding.inflate(layoutInflater)
     }
 
-    override fun initView() {
+    override fun initView(savedInstanceState: Bundle?) {
         binding.tvLeft.setOnClickListener {
+            closeKeyboard()
             finish()
         }
         binding.inputEdittext.addTextChangedListener(object : TextWatcher {
@@ -58,6 +65,7 @@ class SearchLocationActivity : BaseActivity<ActivitySearchLocationBinding>(), In
                 val data = Intent()
                 data.putExtra(Constants.MAP_TIP, t)
                 setResult(RESULT_OK, data)
+                closeKeyboard()
                 finish()
             }
         })

@@ -1,7 +1,9 @@
 package com.liang.map.ui.activity
 
+import android.os.Bundle
 import com.amap.api.services.route.RidePath
 import com.liang.map.databinding.ActivityRouteDetailBinding
+import com.liang.map.ui.activity.base.BaseActivity
 import com.liang.map.ui.adapter.RideSegmentListAdapter
 import com.liang.map.util.AMapUtil
 import com.liang.map.util.Constants
@@ -14,7 +16,7 @@ class RideRouteDetailActivity : BaseActivity<ActivityRouteDetailBinding>() {
         return ActivityRouteDetailBinding.inflate(layoutInflater)
     }
 
-    override fun initView() {
+    override fun initView(savedInstanceState: Bundle?) {
         val duration = AMapUtil.getFriendlyTime(ridePath.duration.toInt())
         val distance = AMapUtil.getFriendlyLength(ridePath.distance.toInt())
         binding.apply {

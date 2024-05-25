@@ -2,9 +2,9 @@ package com.liang.map.ui.overlay
 
 import android.graphics.Bitmap
 import android.graphics.Color
-import com.amap.api.maps2d.AMap
-import com.amap.api.maps2d.CameraUpdateFactory
-import com.amap.api.maps2d.model.*
+import com.amap.api.maps.AMap
+import com.amap.api.maps.CameraUpdateFactory
+import com.amap.api.maps.model.*
 import com.amap.api.services.core.LatLonPoint
 import com.liang.map.R
 import com.liang.map.util.AMapUtil
