@@ -3,15 +3,11 @@
 package com.liang.map.ui.activity
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
-import android.text.Spannable
-import android.text.SpannableStringBuilder
-import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -21,7 +17,10 @@ import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
 import com.amap.api.location.AMapLocationClientOption.AMapLocationMode
 import com.amap.api.location.AMapLocationListener
-import com.amap.api.maps.*
+import com.amap.api.maps.AMap
+import com.amap.api.maps.CameraUpdateFactory
+import com.amap.api.maps.LocationSource
+import com.amap.api.maps.MapView
 import com.amap.api.maps.model.*
 import com.amap.api.services.core.AMapException.CODE_AMAP_SUCCESS
 import com.amap.api.services.core.LatLonPoint
@@ -36,6 +35,7 @@ import com.liang.map.util.AMapUtil
 import com.liang.map.util.Constants
 import com.liang.map.util.SensorEventHelper
 
+
 class MainActivity : BaseMapActivity<ActivityMainBinding>(), AMap.OnMapClickListener,
     AMap.OnMarkerClickListener, AMap.OnInfoWindowClickListener, AMap.InfoWindowAdapter,
     RouteSearch.OnRouteSearchListener,
@@ -49,8 +49,7 @@ class MainActivity : BaseMapActivity<ActivityMainBinding>(), AMap.OnMapClickList
     private val locationOption by lazy { AMapLocationClientOption() }
     private val routeSearch by lazy { RouteSearch(this) }
     private var aMapLocation: AMapLocation? = null
-    private var startLatLonPoint: LatLonPoint? = null
-    private var endLatLonPoint: LatLonPoint? = null
+    private var aMapTip: Tip? = null
     private val sensorHelper by lazy { SensorEventHelper(this) }
     private var onLocationChangedListener: LocationSource.OnLocationChangedListener? = null
     private var circle: Circle? = null
@@ -69,8 +68,6 @@ class MainActivity : BaseMapActivity<ActivityMainBinding>(), AMap.OnMapClickList
 
     override fun initView(savedInstanceState: Bundle?) {
         super.initView(savedInstanceState)
-        //0.privacy
-        showPrivacyDialog()
         //1.map view
         //mapView = binding.map
         //2.location permission
@@ -86,12 +83,12 @@ class MainActivity : BaseMapActivity<ActivityMainBinding>(), AMap.OnMapClickList
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
                     isRideRoute = true
-                    val tip = result.data?.getParcelableExtra<Tip>(Constants.MAP_TIP)
+                    aMapTip = result.data?.getParcelableExtra(Constants.MAP_TIP)
                     Log.i(
                         TAG,
-                        "onItemClick, name:${tip?.name}, address:${tip?.address}, adcode:${tip?.adcode}, district:${tip?.district}, poiID:${tip?.poiID}, typeCode:${tip?.typeCode}, point:${tip?.point}"
+                        "onItemClick, name:${aMapTip?.name}, address:${aMapTip?.address}, adcode:${aMapTip?.adcode}, district:${aMapTip?.district}, poiID:${aMapTip?.poiID}, typeCode:${aMapTip?.typeCode}, point:${aMapTip?.point}"
                     )
-                    tip?.point?.let { rideRoute(LatLonPoint(it.latitude, it.longitude)) }
+                    aMapTip?.point?.let { rideRoute(LatLonPoint(it.latitude, it.longitude)) }
                 }
             }
         //4.listener
@@ -103,13 +100,13 @@ class MainActivity : BaseMapActivity<ActivityMainBinding>(), AMap.OnMapClickList
             launcher.launch(intent)
         }
         binding.btnNavigation.setOnClickListener {
-            if (startLatLonPoint == null) {
+            if (aMapLocation == null) {
                 Toast.makeText(
                     this,
                     "Current location acquisition failed, please try again!",
                     Toast.LENGTH_SHORT
                 ).show()
-            } else if (endLatLonPoint == null) {
+            } else if (aMapTip == null) {
                 Toast.makeText(
                     this,
                     "Destination not set, please select destination!",
@@ -117,10 +114,17 @@ class MainActivity : BaseMapActivity<ActivityMainBinding>(), AMap.OnMapClickList
                 ).show()
             } else {
                 val intent = Intent(this, RideRouteCalculateActivity::class.java).apply {
-                    putExtra(Constants.START_LAT_LON_POINT, startLatLonPoint)
-                    putExtra(Constants.END_LAT_LON_POINT, endLatLonPoint)
+                    putExtra(Constants.START_LAT_LON_POINT, aMapLocation)
+                    putExtra(Constants.END_LAT_LON_POINT, aMapTip)
                 }
                 startActivity(intent)
+
+                /* val params =
+                     AmapNaviParams(Poi(aMapLocation!!.poiName,
+                         LatLng(aMapLocation!!.latitude, aMapLocation!!.longitude), ""), null,
+                         Poi(aMapTip!!.address, LatLng(aMapTip!!.point.latitude, aMapTip!!.point.longitude), ""), AmapNaviType.RIDE)
+                 params.setUseInnerVoice(true)
+                 AmapNaviPage.getInstance().showRouteActivity(applicationContext, params, null, CustomAmapRouteActivity::class.java)*/
             }
         }
         mapView.map.apply {
@@ -152,7 +156,6 @@ class MainActivity : BaseMapActivity<ActivityMainBinding>(), AMap.OnMapClickList
     }
 
     private fun rideRoute(latLonPoint: LatLonPoint) {
-        endLatLonPoint = latLonPoint
         if (aMapLocation == null) {
             Toast.makeText(this, "Error.", Toast.LENGTH_SHORT).show()
             return
@@ -315,7 +318,6 @@ class MainActivity : BaseMapActivity<ActivityMainBinding>(), AMap.OnMapClickList
     override fun onLocationChanged(amapLocation: AMapLocation) {
         Log.v(TAG, "errorCode:${amapLocation.errorCode}, address:${amapLocation.address}")
         aMapLocation = amapLocation
-        startLatLonPoint = LatLonPoint(amapLocation.latitude, amapLocation.longitude)
         if (onLocationChangedListener != null) {
             if (amapLocation.errorCode == AMapLocation.LOCATION_SUCCESS) {
                 binding.locationErrInfoText.visibility = View.GONE

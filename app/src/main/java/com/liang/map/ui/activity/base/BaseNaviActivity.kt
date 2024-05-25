@@ -3,15 +3,18 @@ package com.liang.map.ui.activity.base
 import android.app.Activity
 import android.os.Bundle
 import android.util.Log
+import android.view.Window
 import android.widget.Toast
 import androidx.viewbinding.ViewBinding
-import com.amap.api.location.AMapLocationClient
+import com.amap.api.location.AMapLocation
 import com.amap.api.navi.*
 import com.amap.api.navi.enums.AMapNaviParallelRoadStatus
 import com.amap.api.navi.model.*
 import com.amap.api.services.core.LatLonPoint
+import com.amap.api.services.help.Tip
 import com.liang.map.util.Constants
 import com.liang.map.util.TTSController
+
 
 abstract class BaseNaviActivity<V : ViewBinding> : /*BaseActivity<V>*/ Activity(), AMapNaviListener,
     AMapNaviViewListener, ParallelRoadListener {
@@ -21,22 +24,26 @@ abstract class BaseNaviActivity<V : ViewBinding> : /*BaseActivity<V>*/ Activity(
 
     protected lateinit var binding: V
     private lateinit var aMapNaviView: AMapNaviView
-    protected val aMapNavi: AMapNavi by lazy { AMapNavi.getInstance(application) }
     protected var ttsManager: TTSController? = null
-    protected val startLatLng by lazy { intent.getParcelableExtra<LatLonPoint>(Constants.START_LAT_LON_POINT)!! }
-    protected val endLatLng by lazy { intent.getParcelableExtra<LatLonPoint>(Constants.END_LAT_LON_POINT)!! }
-    protected var wayPointList = arrayListOf<NaviLatLng>()
+    protected val aMapNavi: AMapNavi by lazy { AMapNavi.getInstance(application) }
+    protected val startLatLng by lazy { intent.getParcelableExtra<AMapLocation>(Constants.START_LAT_LON_POINT)!! }
+    protected val endLatLng by lazy { intent.getParcelableExtra<Tip>(Constants.END_LAT_LON_POINT)!! }
+    protected val wayPointList by lazy { arrayListOf<NaviLatLng>() }
+    protected val startNaviLatLngList by lazy { arrayListOf<NaviLatLng>() }
+    protected val endNaviLatLngList by lazy { arrayListOf<NaviLatLng>() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
         binding = getViewBinding()
         setContentView(binding.root)
         Log.i(
             TAG, "onCreate, \n" +
                     "startLatLng(${startLatLng.latitude}, ${startLatLng.longitude}), \n" +
-                    "endLatLng(${endLatLng.latitude}, ${endLatLng.longitude})"
+                    "endLatLng(${endLatLng.point.latitude}, ${endLatLng.point.longitude})"
         )
         aMapNaviView = getAMapView()
+        initView(savedInstanceState)
         aMapNaviView.apply {
             onCreate(savedInstanceState)
             setAMapNaviViewListener(this@BaseNaviActivity)
@@ -48,8 +55,9 @@ abstract class BaseNaviActivity<V : ViewBinding> : /*BaseActivity<V>*/ Activity(
             setEmulatorNaviSpeed(75)
             naviSetting.isScreenAlwaysBright = true
         }
-        initView(savedInstanceState)
-//        registerGpsMonitor()
+        startNaviLatLngList.add(NaviLatLng(startLatLng.latitude, startLatLng.longitude))
+        endNaviLatLngList.add(NaviLatLng(endLatLng.point.latitude, endLatLng.point.longitude))
+        //registerGpsMonitor()
     }
 
     abstract fun getAMapView():AMapNaviView
@@ -232,10 +240,10 @@ abstract class BaseNaviActivity<V : ViewBinding> : /*BaseActivity<V>*/ Activity(
     }
 
     override fun onNaviViewLoaded() {
-        Log.d(TAG, "navi_view_loaded")
-        Log.w(
+        Log.v(TAG, "navi_view_loaded")
+        Log.d(
             TAG,
-            "navi_view_loaded, Please do not use AMapNaviView. getMap(). setOnMapLoadedListener(); Overwrite navigation SDK's internal line drawing logic"
+            "navi_view_loaded, Please do not use AMapNaviView.getMap().setOnMapLoadedListener(); Overwrite navigation SDK's internal line drawing logic"
         )
     }
 
@@ -275,13 +283,16 @@ abstract class BaseNaviActivity<V : ViewBinding> : /*BaseActivity<V>*/ Activity(
     override fun onCalculateRouteSuccess(result: AMapCalcRouteResult) {
         Log.i(
             TAG,
-            "calculate_route_success, calcRouteType:${result.calcRouteType}, routeId:${result.routeid}, errorDescription:${result.errorDescription}, errorCode:${result.errorCode}, errorDetail:${result.errorDetail}"
+            "calculate_route_success, calcRouteType:${result.calcRouteType}, routeId:${result.routeid.toList()}"
         )
     }
 
     override fun onCalculateRouteFailure(result: AMapCalcRouteResult) {
         Log.e(TAG, "--------------------------------------------")
-        Log.i(TAG, "路线计算失败：错误码=" + result.errorCode + ",Error Message= " + result.errorDescription)
+        Log.i(TAG, "路线计算失败, \n" +
+                "errorCode=${result.errorCode}, \n" +
+                "errorDetail:${result.errorDetail}, \n" +
+                "errorDescription=" + result.errorDescription)
         Log.i(TAG, "错误码详细链接见：http://lbs.amap.com/api/android-navi-sdk/guide/tools/errorcode/")
         Log.e(TAG, "--------------------------------------------")
         Toast.makeText(

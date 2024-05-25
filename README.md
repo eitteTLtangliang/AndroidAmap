@@ -197,7 +197,7 @@ public static final int CRUISE = 3;  //巡航
    java.lang.NullPointerException: Attempt to invoke virtual method 'android.view.View com.amap.api.navi.view.nightmode.NightModeLinearLayout.findViewById(int)' on a null object reference
    需将导航页面xxxActivity的父类由AppCompatActivity或其子类换成Activity，并主题更换成android:theme="@android:style/Theme.Light.NoTitleBar"
    其布局文件xxx.xml的跟本局View换成LinearLayout。
-4. ...
+4. 骑行导航与步行导航目前SDK不支持，具体可查看AMap的官方文档 https://lbs.amap.com/faq/android/navi-sdk/navi-component/43171
 
 
   

@@ -12,6 +12,7 @@ abstract class BaseMapActivity<V : ViewBinding> : BaseActivity<V>() {
     override fun initView(savedInstanceState: Bundle?) {
         mapView = getAMapView()
         mapView.onCreate(savedInstanceState)
+        registerGpsMonitor()
     }
 
     abstract fun getAMapView(): MapView
@@ -34,5 +35,6 @@ abstract class BaseMapActivity<V : ViewBinding> : BaseActivity<V>() {
     override fun onDestroy() {
         super.onDestroy()
         mapView.onDestroy()
+        unregisterGpsMonitor()
     }
 }

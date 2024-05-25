@@ -34,6 +34,8 @@ import com.hjq.permissions.OnPermissionCallback
 import com.hjq.permissions.XXPermissions
 import com.liang.map.util.Constants
 import com.liang.map.util.DataStoreUtil
+import com.liang.map.util.isGpsEnable
+import com.liang.map.util.openGps
 
 abstract class BaseActivity<V : ViewBinding> : AppCompatActivity() {
     companion object {
@@ -70,8 +72,7 @@ abstract class BaseActivity<V : ViewBinding> : AppCompatActivity() {
         progressDialog.dismiss()
     }
 
-    protected fun showPrivacyDialog() {
-        if (DataStoreUtil.readBooleanData(Constants.PRIVACY_AGREE)) return
+    protected fun showPrivacyDialog(block: (Boolean) -> Unit) {
         MapsInitializer.updatePrivacyShow(this, true, true)
         val spannable =
             SpannableStringBuilder("\"亲，感谢您对XXX一直以来的信任！我们依据最新的监管要求更新了XXX《隐私权政策》，特向您说明如下\n1.为向您提供交易相关基本功能，我们会收集、使用必要的信息；\n2.基于您的明示授权，我们可能会获取您的位置（为您提供附近的商品、店铺及优惠资讯等）等信息，您有权拒绝或取消授权；\n3.我们会采取业界先进的安全措施保护您的信息安全；\n4.未经您同意，我们不会从第三方处获取、共享或向提供您的信息；\n")
@@ -89,6 +90,7 @@ abstract class BaseActivity<V : ViewBinding> : AppCompatActivity() {
             ) { _, _ ->
                 MapsInitializer.updatePrivacyAgree(this, true)
                 DataStoreUtil.saveSyncBooleanData(Constants.PRIVACY_AGREE, true)
+                block.invoke(true)
             }
             .setNegativeButton(
                 "不同意"
@@ -97,6 +99,7 @@ abstract class BaseActivity<V : ViewBinding> : AppCompatActivity() {
                     this,
                     false
                 )
+                block.invoke(false)
                 finish()
             }
             .show()
@@ -106,7 +109,8 @@ abstract class BaseActivity<V : ViewBinding> : AppCompatActivity() {
         return XXPermissions.isGranted(
             this, arrayOf(
                 Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
             )
         )
     }
@@ -139,11 +143,6 @@ abstract class BaseActivity<V : ViewBinding> : AppCompatActivity() {
         })
     }
 
-    protected fun isGpsEnable(): Boolean {
-        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-    }
-
     protected fun registerGpsMonitor() {
         val intentFilter = IntentFilter()
         intentFilter.addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
@@ -171,7 +170,9 @@ abstract class BaseActivity<V : ViewBinding> : AppCompatActivity() {
                                 binding.root,
                                 "GPS is turned off, please turn it on.",
                                 Snackbar.LENGTH_LONG
-                            ).show()
+                            ).setAction(
+                                "Turn on"
+                            ) { openGps() }.show()
                         }
                     }
                 }
